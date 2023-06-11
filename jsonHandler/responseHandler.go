@@ -1,6 +1,7 @@
 package jsonHandler
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -41,8 +42,8 @@ type TextMessage struct {
 }
 
 type Result struct {
-	UpgradeId int         `json:"upgrade_id"`
-	Message   TextMessage `json:"message"`
+	UpdateId int         `json:"update_id"`
+	Message  TextMessage `json:"message"`
 }
 
 type Response struct {
@@ -51,7 +52,7 @@ type Response struct {
 }
 
 // Разборка json ответа на структуры
-func ParseResponse(resp *http.Response) any {
+func ParseResponse(resp *http.Response) Response {
 	jsonResponse, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
@@ -72,7 +73,7 @@ func ParseResponse(resp *http.Response) any {
 		log.Fatal("404") //подумать над обработкой
 	}
 
-	return "func parseResponse. Не могу разобрать."
+	return Response{}
 }
 
 func GetMethodTgAPI(method string) *http.Response {
@@ -103,4 +104,23 @@ func readToken() string {
 		return string(data[:n])
 	}
 	return "oops"
+}
+
+func PostMethodTgAPI(method string, data any) *http.Response {
+	q, err := json.Marshal(data)
+	r := bytes.NewReader(q)
+
+	resp, err := http.Post(fmt.Sprintf("https://api.telegram.org/bot%s/%s", readToken(), method), "application/json", r)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return resp
+}
+
+func UpdateOffset(updateId int) {
+	test := ParseResponse(PostMethodTgAPI("getUpdates", struct {
+		Offset int `json:"offset"`
+	}{updateId}))
+
+	fmt.Println(test)
 }
