@@ -51,7 +51,7 @@ type Response struct {
 	Result []Result `json:"result"`
 }
 
-// Разборка json ответа на структуры
+// ParseResponse Разборка json ответа на структуры
 func ParseResponse(resp *http.Response) Response {
 	jsonResponse, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -63,7 +63,6 @@ func ParseResponse(resp *http.Response) Response {
 		{
 			var messageArray Response
 			err = json.Unmarshal(jsonResponse, &messageArray)
-			log.Println(messageArray)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -117,10 +116,22 @@ func PostMethodTgAPI(method string, data any) *http.Response {
 	return resp
 }
 
-func UpdateOffset(updateId int) {
-	test := ParseResponse(PostMethodTgAPI("getUpdates", struct {
-		Offset int `json:"offset"`
-	}{updateId}))
+func GetUpdates() func() int {
 
-	fmt.Println(test)
+	updateId := 0
+
+	return func() int {
+		resp := ParseResponse(PostMethodTgAPI("getUpdates", struct {
+			Offset int `json:"offset"`
+		}{updateId}))
+
+		fmt.Println(updateId, resp)
+
+		if len(resp.Result) > 0 {
+			updateId = resp.Result[len(resp.Result)-1].UpdateId + 1
+		}
+
+		return updateId
+	}
+
 }
